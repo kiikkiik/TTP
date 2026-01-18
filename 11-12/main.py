@@ -1,180 +1,152 @@
 """
-Главный модуль программы - консольное приложение для управления заданиями.
+Главный модуль программы.
 """
 
-import sys
-import random
 import logging
-from task_1 import execute_task_1_algorithm
-from task_4 import execute_task_4_algorithm
-from task_5 import execute_task_5_algorithm
+import sys
+from messages import COMMON, MENU, HELP, LOGGING
+from task_1 import run_task1
+from task_4 import run_task4
+from task_5 import run_task5
 
+# Настройка логирования
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[logging.FileHandler("app.log", encoding='utf-8'),
-              logging.StreamHandler()]  # Добавим вывод в консоль тоже
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[logging.FileHandler("app.log", encoding='utf-8')]
 )
+
 logger = logging.getLogger(__name__)
 
-# Глобальные переменные для хранения данных
-data1 = None  # Кортеж (arr1, arr2) для задания 1
-data4 = None  # Кортеж (arr1, arr2, operation) для задания 4
-data5 = None  # Кортеж (arr, target_sum) для задания 5
-res1 = None   # Результат задания 1
-res4 = None   # Результат задания 4
-res5 = None   # Результат задания 5
 
-def input_arr():
-    """
-    Вводит массив чисел с возможностью ручного или случайного заполнения.
-    """
-    n = int(input("Размер массива: "))
-    way = input("1 - вручную, 2 - случайные числа: ")
+def change_logging_level():
+    """Изменение уровня логирования."""
+    print(f"\n{LOGGING['title']}")
+    print(LOGGING["levels"])
+    print(LOGGING["level1"])
+    print(LOGGING["level2"])
+    print(LOGGING["level3"])
+    print(LOGGING["level4"])
+    print(LOGGING["level5"])
     
-    logger.info(f"Ввод массива: размер={n}, способ={way}")
+    choice = input(LOGGING["prompt_level"]).strip()
     
-    if way == "2":
-        arr = [random.randint(-10, 10) for _ in range(n)]
-        logger.info(f"Сгенерирован случайный массив: {arr}")
-        return arr
+    level_map = {
+        '1': logging.DEBUG,
+        '2': logging.INFO,
+        '3': logging.WARNING,
+        '4': logging.ERROR,
+        '5': logging.CRITICAL
+    }
+    
+    if choice in level_map:
+        new_level = level_map[choice]
+        logging.getLogger().setLevel(new_level)
+        
+        # Обновляем уровень всех обработчиков
+        for handler in logging.getLogger().handlers:
+            handler.setLevel(new_level)
+        
+        level_name = logging.getLevelName(new_level)
+        print(LOGGING["level_changed"].format(level_name))
+        logger.info(LOGGING["level_changed"].format(level_name))
+        
+        # Демонстрация
+        print(LOGGING["demo"].format(level_name))
+        logger.debug("DEBUG сообщение")
+        logger.info("INFO сообщение")
+        logger.warning("WARNING сообщение")
+        logger.error("ERROR сообщение")
+        logger.critical("CRITICAL сообщение")
     else:
-        user_input = input("Введите числа через пробел: ")
-        arr = list(map(int, user_input.split()))
-        logger.info(f"Введен массив вручную: {arr}")
-        return arr
+        logger.warning(LOGGING["invalid_level"])
+        print(MENU["invalid_choice"])
 
-def task1():
-    """Выполняет задание 1 через консольный интерфейс."""
-    global data1, res1
-    
-    logger.info("Начало выполнения задания 1")
-    print("\n--- Задание 1: Обработка двух массивов ---")
-    
-    print("Введите первый массив:")
-    a = input_arr()
-    print("Введите второй массив:")
-    b = input_arr()
-    
-    data1 = (a, b)
-    logger.info(f"Вызов функции execute_task_1_algorithm с параметрами: arr1={a}, arr2={b}")
-    
-    # Используем копии массивов, чтобы не изменять оригиналы
-    res1, s1, s2 = execute_task_1_algorithm(a.copy(), b.copy())
-    
-    logger.info(f"Задание 1 выполнено. Результат: {res1}")
-    
-    print("\nРезультаты:")
-    print(f"Отсортированный первый массив (по убыванию): {s1}")
-    print(f"Отсортированный второй массив (по возрастанию): {s2}")
-    print(f"Итоговый массив: {res1}")
 
-def task4():
-    """Выполняет задание 4 через консольный интерфейс."""
-    global data4, res4
-    
-    logger.info("Начало выполнения задания 4")
-    print("\n--- Задание 4: Арифметика чисел-массивов ---")
-    
-    print("Введите первое число (цифры через пробел):")
-    a_input = input()
-    a = list(map(int, a_input.split()))
-    
-    print("Введите второе число (цифры через пробел):")
-    b_input = input()
-    b = list(map(int, b_input.split()))
-    
-    op = input("Операция (+ или -): ")
-    
-    logger.info(f"Ввод для задания 4: a={a}, b={b}, операция={op}")
-    data4 = (a, b, op)
-    
-    logger.info(f"Вызов функции execute_task_4_algorithm с параметрами: arr1={a}, arr2={b}, operation={op}")
-    res4 = execute_task_4_algorithm(a, b, op)
-    logger.info(f"Задание 4 выполнено. Результат: {res4}")
-    
-    # Форматируем вывод: заменяем дефис на минус для читаемости
-    if isinstance(res4[0], str) and res4[0] == '-':
-        formatted_result = "−" + "".join(map(str, res4[1:]))
-    else:
-        formatted_result = "".join(map(str, res4))
-    
-    print(f"Результат: {formatted_result}")
-
-def task5():
-    """Выполняет задание 5 через консольный интерфейс."""
-    global data5, res5
-    
-    logger.info("Начало выполнения задания 5")
-    print("\n--- Задание 5: Подмассивы с заданной суммой ---")
-    
-    arr = input_arr()
-    target = int(input("Целевая сумма: "))
-    
-    logger.info(f"Ввод для задания 5: массив={arr}, целевая сумма={target}")
-    data5 = (arr, target)
-    
-    logger.info(f"Вызов функции execute_task_5_algorithm с параметрами: arr={arr}, target_sum={target}")
-    res5 = execute_task_5_algorithm(arr, target)
-    logger.info(f"Задание 5 выполнено. Количество подмассивов: {res5}")
-    
-    print(f"Количество подмассивов с суммой {target}: {res5}")
-
+def show_help():
+    """Отображение справки."""
+    print(f"\n{HELP['title']}")
+    print(HELP["task1"])
+    print(HELP["task4"])
+    print(HELP["task5"])
+    print(HELP["help"])
+    print(HELP["logging"])
+    print(HELP["exit"])
+    logger.info("Показана справка")
 
 
 def main_menu():
     """Главное меню программы."""
-    logger.info("=" * 50)
-    logger.info("ПРОГРАММА ЗАПУЩЕНА")
-    logger.info("=" * 50)
+    logger.info(COMMON["program_start"])
     
-    print("=" * 50)
-    print("ПРОГРАММА ДЛЯ ВЫПОЛНЕНИЯ ЗАДАНИЙ")
-    print("Логирование включено. Логи сохраняются в app.log")
-    print("Текущий уровень логирования: INFO")
-    print("=" * 50)
+    print("=" * 60)
+    print("ПРОГРАММА ДЛЯ ВЫПОЛНЕНИЯ ЗАДАНИЙ ПО РАБОТЕ С МАССИВАМИ")
+    print("=" * 60)
     
-    while True:
-        print("\n" + "="*50)
-        print("ГЛАВНОЕ МЕНЮ")
-        print("1. Задание 1: Обработка двух массивов")
-        print("4. Задание 4: Арифметика чисел-массивов")
-        print("5. Задание 5: Подмассивы с заданной суммой")
-        print("h. Справка")
-        print("l. Изменить уровень логирования")
-        print("0. Выход")
-        choice = input("Выберите пункт меню: ").strip()
-        
-        if choice == '1':
-            logger.info("Выбрано задание 1. Обработка двух массивов.")
-            task1()
-        elif choice == '4':
-            logger.info("Выбрано задание 4. Арифметика чисел-массивов.")
-            task4()
-        elif choice == '5':
-            logger.info("Выбрано задание 5. Подмассивы с заданной суммой.")
-            task5()
-        elif choice.lower() == 'h':
-            logger.info("Выбрана справка.")
-        elif choice.lower() == 'l':
-            logger.info("Выбрано изменение уровня логирования.")
-        elif choice == '0':
-            logger.info("Выбран выход из программы.")
-            print("Выход из программы.")
-            break
-        else:
-            logger.warning(f"Неверный выбор в меню: {choice}")
-            print("Неверный выбор. Введите 'h' для справки.")
-
-# Точка входа в программу
-if __name__ == "__main__":
+    menu_actions = {
+        '1': {
+            'name': MENU["task1"],
+            'action': run_task1,
+            'log': "Выбрано задание 1"
+        },
+        '4': {
+            'name': MENU["task4"],
+            'action': run_task4,
+            'log': "Выбрано задание 4"
+        },
+        '5': {
+            'name': MENU["task5"],
+            'action': run_task5,
+            'log': "Выбрано задание 5"
+        },
+        'h': {
+            'name': MENU["help"],
+            'action': show_help,
+            'log': "Запрошена справка"
+        },
+        'l': {
+            'name': MENU["logging"],
+            'action': change_logging_level,
+            'log': "Изменение уровня логирования"
+        },
+        '0': {
+            'name': MENU["exit"],
+            'action': lambda: None,
+            'log': "Выход из программы"
+        }
+    }
+    
     try:
-        main_menu()
-    except KeyboardInterrupt:
-        logger.info("Программа прервана пользователем (Ctrl+C)")
-        print("\n\nПрограмма прервана пользователем.")
-        sys.exit()
+        while True:
+            print("\n" + "="*50)
+            print(MENU["title"])
+            
+            # Динамическое отображение меню
+            for key, value in menu_actions.items():
+                print(f"{key}. {value['name']}")
+            
+            choice = input(MENU["prompt_choice"]).strip().lower()
+            
+            if choice == '0':
+                logger.info(menu_actions['0']['log'])
+                print(COMMON["program_exit"])
+                break
+            
+            if choice in menu_actions:
+                logger.info(menu_actions[choice]['log'])
+                menu_actions[choice]['action']()
+            else:
+                logger.warning(f"Неверный выбор: '{choice}'")
+                print(MENU["invalid_choice"])
+                
+    except (KeyboardInterrupt, EOFError):
+        logger.info(COMMON["program_interrupted"])
+        print(f"\n{COMMON['program_interrupted']}")
     except Exception as e:
-        logger.error(f"Неожиданная ошибка в main: {e}", exc_info=True)
-        print(f"\nПроизошла ошибка: {e}")
-        print("Подробности в лог-файле.")
+        logger.critical(COMMON["unexpected_error"].format(e), exc_info=True)
+        print(COMMON["unexpected_error"].format(e))
+        print(COMMON["details_in_log"])
+
+
+if __name__ == "__main__":
+    main_menu()
