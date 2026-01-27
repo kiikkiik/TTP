@@ -1,83 +1,144 @@
 """
-Демонстрация клиент-серверного приложения для задач 1, 4, 5.
-Сервер использует ТОЧНО ТАКИЕ ЖЕ алгоритмы, как в консольной версии.
+Главный модуль приложения (корутинный FSM)
 """
 
-import queue
-import time
-import threading
-from server import TaskServer
-from client import ClientThread
+import logging
+from messages import MESSAGES
+from task_1 import task1_fsm
+from task_4 import task4_fsm
+from task_5 import task5_fsm
+
+logger = logging.getLogger(__name__)
+msgs = MESSAGES["main_menu"]
+
+def show_help():
+    """Показывает справку."""
+    print("\n=== СПРАВКА ===")
+    print("1 - Обработка двух массивов (сортировка и поэлементное сложение)")
+    print("4 - Арифметические операции над числами в виде массивов")
+    print("5 - Поиск подмассивов с заданной суммой")
+    print("h - Показать эту справку")
+    print("l - Изменить уровень логирования")
+    print("0 - Выйти из программы")
+    logger.info("Показана справка")
+
+def change_logging_level():
+    """Изменяет уровень логирования."""
+    print("\n=== Изменение уровня логирования ===")
+    print("Доступные уровни:")
+    print("1. DEBUG - все сообщения")
+    print("2. INFO - информационные сообщения")
+    print("3. WARNING - только предупреждения")
+    print("4. ERROR - только ошибки")
+    print("5. CRITICAL - только критические ошибки")
+    
+    choice = input("Выберите уровень (1-5): ").strip()
+    
+    level_map = {
+        '1': logging.DEBUG,
+        '2': logging.INFO,
+        '3': logging.WARNING,
+        '4': logging.ERROR,
+        '5': logging.CRITICAL
+    }
+    
+    if choice in level_map:
+        new_level = level_map[choice]
+        logging.getLogger().setLevel(new_level)
+        level_name = logging.getLevelName(new_level)
+        print(f"Уровень логирования изменен на: {level_name}")
+        logger.info(f"Уровень логирования изменен на: {level_name}")
+    else:
+        print("Неверный выбор уровня")
+        logger.warning("Неверный выбор уровня логирования")
+
+
+def main_fsm():
+    """
+    Корутина главного меню верхнего уровня.
+    """
+    while True:
+        print("\n" + msgs["title"])
+        for option in msgs["options"]:
+            print(option)
+
+        choice = yield
+        logger.info(f"MAIN choice: {choice}")
+
+        try:
+            if choice == "1":
+                fsm = task1_fsm()
+                next(fsm)
+                while True:
+                    try:
+                        sub_choice = input(msgs["prompt"]).strip()
+                        fsm.send(sub_choice)
+                    except StopIteration:
+                        break
+                        
+            elif choice == "4":
+                fsm = task4_fsm()
+                next(fsm)
+                while True:
+                    try:
+                        sub_choice = input(msgs["prompt"]).strip()
+                        fsm.send(sub_choice)
+                    except StopIteration:
+                        break
+                        
+            elif choice == "5":
+                fsm = task5_fsm()
+                next(fsm)
+                while True:
+                    try:
+                        sub_choice = input(msgs["prompt"]).strip()
+                        fsm.send(sub_choice)
+                    except StopIteration:
+                        break
+                        
+            elif choice == "h":
+                show_help()
+            elif choice == "l":
+                change_logging_level()
+            elif choice == "0":
+                print(msgs["exit"])
+                logger.info("Application exit")
+                return
+            else:
+                print(msgs["invalid"])
+
+        except Exception as e:
+            print(f"Ошибка: {e}")
+            logger.error(f"Error: {e}")
 
 def main():
-    """
-    Точка входа: создает очередь, запускает сервер и клиентов.
-    """
-    # Создаем очередь для обмена сообщениями
-    q = queue.Queue()
+    # Настройка логирования
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[logging.FileHandler("app.log", encoding='utf-8')]
+    )
     
-    # Запускаем сервер
-    server = TaskServer(q)
-    server.start()
-    
-    # Даем серверу время на запуск
-    time.sleep(0.5)
-    
-    # Создаем сценарии для клиентов (каждый клиент делает разные задачи)
-    actions1 = [
-        {'task': 'task1', 'generate': True, 'params': {'size': 5}},
-        {'task': 'task4', 'generate': True, 'params': {'len_a': 3, 'len_b': 2}}
-    ]
-    
-    actions2 = [
-        {'task': 'task5', 'generate': True, 'params': {'size': 7}},
-        {'task': 'task1', 'generate': True, 'params': {'size': 4}}
-    ]
-    
-    actions3 = [
-        {'task': 'task1', 'generate': True, 'params': {'size': 6}},
-        {'task': 'task4', 'generate': True, 'params': {'len_a': 4, 'len_b': 3}},
-        {'task': 'task5', 'generate': True, 'params': {'size': 8}}
-    ]
-
-    # Создаем и запускаем клиентов
-    client1 = ClientThread("Клиент1", q, actions1)
-    client2 = ClientThread("Клиент2", q, actions2)
-    client3 = ClientThread("Клиент3", q, actions3)
-
-    clients = [client1, client2, client3]
-    
-    print(f"\n{time.strftime('%H:%M:%S')} Запуск клиентов...")
-    for c in clients:
-        c.start()
-        time.sleep(0.1)  # Небольшая задержка между запусками
-
-    print(f"\nЗапущено клиентов: {len(clients)}")
-    print(f"Всего активных потоков: {threading.active_count()}")
+    logger.info("Программа запущена")
     print("=" * 60)
-    print("Наблюдайте за параллельной работой клиентов!")
+    print("ПРОГРАММА ДЛЯ ВЫПОЛНЕНИЯ ЗАДАНИЙ ПО РАБОТЕ С МАССИВАМИ")
     print("=" * 60)
-    print()
 
-    # Ждем завершения всех клиентов
-    for c in clients:
-        c.join()
-
-    # Даем серверу время обработать все оставшиеся задачи
-    while not q.empty():
-        time.sleep(0.2)
-
-    # Подождем немного перед остановкой сервера
-    time.sleep(1.0)
-
-    # Останавливаем сервер
-    server.stop()
-    server.join(timeout=2.0)
+    fsm = main_fsm()
+    next(fsm)
     
-    print("\n" + "=" * 60)
-    print("ВСЕ ЗАДАЧИ ВЫПОЛНЕНЫ")
-    print("=" * 60)
-    print("Логи сервера сохранены в файле: server.log")
+    while True:
+        try:
+            choice = input(msgs["prompt"]).strip().lower()
+            fsm.send(choice)
+        except StopIteration:
+            break
+        except KeyboardInterrupt:
+            print("\n\nПрограмма прервана пользователем")
+            break
+        except Exception as e:
+            print(f"Неожиданная ошибка: {e}")
+            logger.exception(f"Unhandled exception: {e}")
 
 if __name__ == "__main__":
     main()
