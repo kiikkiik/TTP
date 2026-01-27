@@ -1,86 +1,206 @@
-# ================ exceptions.py ================
 """
-exceptions.py - Пользовательские исключения в функциональном стиле
+ПОЛЬЗОВАТЕЛЬСКИЕ ИСКЛЮЧЕНИЯ С ДОПОЛНИТЕЛЬНОЙ ИНФОРМАЦИЕЙ
 
-Этот файл содержит иерархию исключений, которые используются во всем приложении.
-Каждое исключение имеет конкретное назначение, что помогает точно определить
-причину ошибки и упростить отладку.
+ОПТИМИЗАЦИИ:
+1. Иерархия исключений для точной обработки
+2. Контекстная информация в исключениях
+3. Автоматическое логирование
+4. Пользовательские сообщения об ошибках
+
+ВАЖНОСТЬ:
+1. Чистая обработка ошибок
+2. Понятные сообщения пользователю
+3. Упрощение отладки
+4. Предотвращение падений бота
 """
 
-class AppException(Exception):
-    """
-    Корневой класс всех исключений в приложении.
-    Все остальные исключения наследуются от этого класса.
-    Это позволяет отлавливать любые ошибки приложения одним блоком try-except.
-    """
-    pass
+from typing import Optional, Any, Dict
+from logger import logger
 
-class InvalidInputError(AppException):
+class BotError(Exception):
     """
-    Выбрасывается, когда пользователь вводит некорректные данные.
-    Например: буквы вместо чисел, неправильный формат ввода.
+    Базовый класс всех исключений бота
+    
+    ДОПОЛНИТЕЛЬНЫЕ ВОЗМОЖНОСТИ:
+    1. Автоматическое логирование
+    2. Контекстная информация
+    3. Пользовательские сообщения
     """
-    pass
+    
+    def __init__(self, 
+                 message: str, 
+                 user_message: Optional[str] = None,
+                 context: Optional[Dict[str, Any]] = None,
+                 log_level: str = "ERROR"):
+        """
+        Инициализация исключения
+        
+        Args:
+            message: внутреннее сообщение об ошибке (для логов)
+            user_message: сообщение для показа пользователю
+            context: дополнительный контекст ошибки
+            log_level: уровень логирования (ERROR, WARNING, INFO)
+        """
+        self.message = message
+        self.user_message = user_message or message
+        self.context = context or {}
+        self.log_level = log_level
+        
+        # Автоматическое логирование при создании исключения
+        self._log_error()
+        
+        super().__init__(self.message)
+    
+    def _log_error(self):
+        """Автоматическое логирование исключения"""
+        log_message = f"{self.__class__.__name__}: {self.message}"
+        
+        if self.context:
+            context_str = ", ".join(f"{k}={v}" for k, v in self.context.items())
+            log_message += f" [Context: {context_str}]"
+        
+        # Используем глобальный логгер
+        if self.log_level == "WARNING":
+            logger.warning(log_message)
+        elif self.log_level == "INFO":
+            logger.info(log_message)
+        else:
+            logger.error(log_message)
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Сериализация исключения в словарь (для API)"""
+        return {
+            "type": self.__class__.__name__,
+            "message": self.message,
+            "user_message": self.user_message,
+            "context": self.context
+        }
 
-class InvalidArrayError(AppException):
-    """
-    Возникает при попытке работы с недопустимым массивом.
-    Пример: пустой массив, когда он не ожидается.
-    """
-    pass
+# ========== СПЕЦИАЛИЗИРОВАННЫЕ ИСКЛЮЧЕНИЯ ==========
 
-class InvalidNumberError(AppException):
+class ValidationError(BotError):
     """
-    Используется для ошибок, связанных с числовыми значениями.
-    Например: число вне допустимого диапазона.
+    Ошибка валидации входных данных
+    
+    Вызывается когда:
+    1. Неправильный формат ввода
+    2. Некорректные типы данных
+    3. Нарушение ограничений (длина, диапазон)
+    
+    Пример использования:
+        raise ValidationError(
+            message="Массивы разной длины",
+            user_message="Массивы должны быть одинаковой длины",
+            context={"arr1_len": len(arr1), "arr2_len": len(arr2)}
+        )
     """
-    pass
+    def __init__(self, message: str, user_message: Optional[str] = None, 
+                 context: Optional[Dict[str, Any]] = None):
+        super().__init__(message, user_message, context, log_level="WARNING")
 
-class UnsupportedOperationError(AppException):
+class CalculationError(BotError):
     """
-    Выбрасывается, когда программа пытается выполнить неподдерживаемую операцию.
-    Например: деление на ноль или несуществующая математическая операция.
+    Ошибка выполнения вычислений
+    
+    Вызывается когда:
+    1. Математические ошибки (деление на 0)
+    2. Переполнение вычислений
+    3. Ошибки в алгоритмах
+    
+    Пример использования:
+        raise CalculationError(
+            message="Division by zero in calculation",
+            user_message="Ошибка вычислений: деление на ноль",
+            context={"operation": "division", "divisor": 0}
+        )
     """
-    pass
+    def __init__(self, message: str, user_message: Optional[str] = None,
+                 context: Optional[Dict[str, Any]] = None):
+        super().__init__(message, user_message, context, log_level="ERROR")
 
-class ArrayLengthMismatchError(AppException):
+class InputError(BotError):
     """
-    Возникает, когда массивы имеют разную длину, но по логике программы
-    должны быть одинаковыми. Например, при поэлементном сложении.
+    Ошибка ввода пользователя
+    
+    Вызывается когда:
+    1. Пользователь ввел некорректные данные
+    2. Не хватает обязательных параметров
+    3. Неподдерживаемый формат
+    
+    Пример использования:
+        raise InputError(
+            message="Invalid input format for task 1",
+            user_message="Неверный формат. Используйте: 1 2 3;4 5 6",
+            context={"input": user_input, "expected_format": "array;array"}
+        )
     """
-    pass
+    def __init__(self, message: str, user_message: Optional[str] = None,
+                 context: Optional[Dict[str, Any]] = None):
+        super().__init__(message, user_message, context, log_level="INFO")
 
-class EmptyArrayError(AppException):
+class ConfigurationError(BotError):
     """
-    Выбрасывается при попытке работы с пустым массивом,
-    когда по смыслу задачи массив должен содержать элементы.
+    Ошибка конфигурации бота
+    
+    Вызывается когда:
+    1. Неверный токен бота
+    2. Отсутствуют обязательные настройки
+    3. Ошибки в конфигурационных файлах
     """
-    pass
+    def __init__(self, message: str, user_message: Optional[str] = None,
+                 context: Optional[Dict[str, Any]] = None):
+        super().__init__(message, user_message or "Ошибка конфигурации бота", 
+                        context, log_level="CRITICAL")
 
-class NegativeResultError(AppException):
+class ResourceError(BotError):
     """
-    Используется, когда результат вычисления получается отрицательным,
-    но по условиям задачи это недопустимо.
+    Ошибка ресурсов
+    
+    Вызывается когда:
+    1. Закончилась память
+    2. Превышены лимиты времени
+    3. Проблемы с файловой системой
     """
-    pass
+    def __init__(self, message: str, user_message: Optional[str] = None,
+                 context: Optional[Dict[str, Any]] = None):
+        super().__init__(message, user_message or "Ошибка ресурсов", 
+                        context, log_level="ERROR")
 
-class ValidationError(AppException):
-    """
-    Общее исключение для ошибок валидации данных.
-    Например: проверка входных параметров функций.
-    """
-    pass
+# ========== УТИЛИТЫ ДЛЯ РАБОТЫ С ИСКЛЮЧЕНИЯМИ ==========
 
-class CalculationError(AppException):
+def handle_bot_error(error: BotError) -> str:
     """
-    Выбрасывается при ошибках во время вычислений.
-    Например: переполнение, деление на ноль, некорректные математические операции.
+    Обработка исключения бота и возврат сообщения для пользователя
+    
+    Args:
+        error: исключение BotError или его наследник
+    
+    Returns:
+        str: сообщение для показа пользователю
     """
-    pass
+    return error.user_message
 
-# Алиасы для обеспечения обратной совместимости
-# Эти имена используются в других модулях для единообразия
-AppError = AppException  # Синоним для AppException
-DataNotSetError = ValidationError  # Конкретный случай валидации
-OperationError = CalculationError  # Синоним для CalculationError
-InvalidValueError = InvalidInputError  # Конкретный случай некорректного ввода
+def safe_execute(func, *args, **kwargs):
+    """
+    Безопасное выполнение функции с перехватом исключений
+    
+    Args:
+        func: функция для выполнения
+        *args, **kwargs: аргументы функции
+    
+    Returns:
+        tuple: (результат, ошибка_или_None)
+    """
+    try:
+        result = func(*args, **kwargs)
+        return result, None
+    except BotError as e:
+        return None, e
+    except Exception as e:
+        # Преобразование стандартных исключений в BotError
+        bot_error = CalculationError(
+            message=f"Unexpected error: {str(e)}",
+            user_message="Внутренняя ошибка бота",
+            context={"original_error": str(e), "function": func.__name__}
+        )
+        return None, bot_error
