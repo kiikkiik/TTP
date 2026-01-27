@@ -1,62 +1,48 @@
 """
-exceptions.py
-
-Содержит классы исключений для приложения.
+ПОЛЬЗОВАТЕЛЬСКИЕ ИСКЛЮЧЕНИЯ
+Собственные классы исключений для лучшей обработки ошибок.
+Позволяют различать типы ошибок и показывать понятные сообщения.
 """
 
-class AppException(Exception):
-    """Базовый класс всех исключений приложения"""
+# ========== ИЕРАРХИЯ ИСКЛЮЧЕНИЙ ==========
+
+class BotError(Exception):
+    """
+    БАЗОВОЕ ИСКЛЮЧЕНИЕ БОТА
+    От этого класса наследуются все остальные исключения.
+    Используется для перехвата любых ошибок бота.
+    """
     pass
 
-class InvalidInputError(AppException):
-    """Ошибка некорректного пользовательского ввода"""
+class InputError(BotError):
+    """
+    ОШИБКА ВВОДА ПОЛЬЗОВАТЕЛЕМ
+    Вызывается когда:
+    - Неправильный формат ввода
+    - Пустые данные
+    - Некорректные значения
+    Пример: "1 2 а;4 5 6" - 'а' не число
+    """
     pass
 
-class InvalidArrayError(AppException):
-    """Ошибка при вводе недопустимого массива"""
+class CalculationError(BotError):
+    """
+    ОШИБКА ВЫЧИСЛЕНИЙ
+    Вызывается когда:
+    - Деление на ноль
+    - Переполнение
+    - Математические ошибки
+    Пример: слишком большие числа для возведения в степень
+    """
     pass
 
-class InvalidNumberError(AppException):
-    """Ошибка при вводе недопустимого числа"""
-    pass
-
-class UnsupportedOperationError(AppException):
-    """Операция не поддерживается"""
-    pass
-
-class ArrayLengthMismatchError(AppException):
-    """Длины массивов не совпадают"""
-    pass
-
-class EmptyArrayError(AppException):
-    """Массив пуст"""
-    pass
-
-class NegativeResultError(AppException):
-    """Результат отрицателен и не поддерживается"""
-    pass
-
-class ValidationError(AppException):
-    """Ошибка валидации данных"""
-    pass
-
-class CalculationError(AppException):
-    """Ошибка при вычислениях"""
-    pass
-
-# Дополнительные исключения для совместимости
-class AppError(AppException):
-    """Алиас для совместимости"""
-    pass
-
-class DataNotSetError(AppException):
-    """Данные не заданы"""
-    pass
-
-class OperationError(AppException):
-    """Ошибка выполнения операции"""
-    pass
-
-class InvalidValueError(AppException):
-    """Некорректные значения"""
+class ValidationError(BotError):
+    """
+    ОШИБКА ВАЛИДАЦИИ ДАННЫХ
+    Вызывается когда:
+    - Несовместимые размеры массивов
+    - Отсутствуют обязательные данные
+    - Данные не соответствуют ожиданиям
+    Пример: массивы разной длины в задании 1
+    """
     pass
